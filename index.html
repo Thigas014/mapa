@@ -1,75 +1,52 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta charset="utf-8" />
-    <title>Mapa Esperança</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map {
-            height: 100vh;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Mapa Esperança - PB</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100%; }
+  </style>
 </head>
-
 <body>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        // Cria o mapa centralizado
-        var map = L.map('map').setView([-7.0228, -35.86], 12);
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Coordenadas de Esperança, PB
+    var map = L.map('map').setView([-7.0228, -35.86], 13);
 
-        // Adiciona mapa base (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+    // Fundo de mapa OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-        // Carrega os GeoJSONs
-        fetch('esperanca.json')
-            .then(res => res.json())
-            .then(data => {
-                var municipioLayer = L.geoJSON(data, { style: { color: "blue", weight: 2 } });
-                municipioLayer.addTo(map);
+    // Função para carregar GeoJSON
+    function addGeoJSON(url, styleOptions, isMarker, popupProp) {
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          L.geoJSON(data, {
+            style: styleOptions,
+            pointToLayer: isMarker ? (feature, latlng) => {
+              return L.circleMarker(latlng, styleOptions);
+            } : undefined,
+            onEachFeature: (feature, layer) => {
+              if (popupProp && feature.properties && feature.properties[popupProp]) {
+                layer.bindPopup(feature.properties[popupProp]);
+              }
+            }
+          }).addTo(map);
+        });
+    }
 
-                // Zoom para caber no município
-                map.fitBounds(municipioLayer.getBounds());
-            });
+   
 
-        fetch('escola.json')
-            .then(res => res.json())
-            .then(data => {
-                var escolasLayer = L.geoJSON(data, {
-                    pointToLayer: (feature, latlng) => L.marker(latlng),
-                    onEachFeature: (feature, layer) => {
-                        if (feature.properties && feature.properties.nome) {
-                            layer.bindPopup("Escola: " + feature.properties.nome);
-                        }
-                    }
-                });
-                escolasLayer.addTo(map);
-            });
+    // 2️⃣ Escola (ponto) - azul
+    addGeoJSON('escola.json', { radius: 8, fillColor: 'blue', color: '#000', weight: 1, opacity: 1, fillOpacity: 0.8 }, true, 'nome');
 
-        fetch('aluno.json')
-            .then(res => res.json())
-            .then(data => {
-                var alunosLayer = L.geoJSON(data, {
-                    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-                        radius: 5,
-                        fillColor: "red",
-                        color: "#000",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    }),
-                    onEachFeature: (feature, layer) => {
-                        if (feature.properties && feature.properties.nome) {
-                            layer.bindPopup("Aluno: " + feature.properties.nome);
-                        }
-                    }
-                });
-                alunosLayer.addTo(map);
-            });
-    </script>
+    // 3️⃣ Alunos (pontos) - vermelho
+    addGeoJSON('aluno.json', { radius: 6, fillColor: 'red', color: '#000', weight: 1, opacity: 1, fillOpacity: 0.7 }, true, 'nome');
+  </script>
 </body>
-
 </html>
